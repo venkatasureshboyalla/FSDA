@@ -1,0 +1,76 @@
+create table BV_sales_data_final (
+order_id varchar (150),
+order_date varchar (150),
+ship_date varchar (150),
+ship_mode varchar (200),
+customer_name varchar (150),
+segment varchar (150),
+state varchar (150),
+country varchar (150),
+market varchar (150),
+region varchar (150),
+product_id varchar (150),
+category varchar (150),
+sub_category varchar (150),
+product_name varchar (150),
+sales number (10,2),
+quantity int,
+discount number (10,2),
+profit number (10,2),
+shipping_cost number (10,2),
+order_priority varchar (150),
+year int
+);
+
+#### set order_id as Primary key.
+
+alter table BV_sales_data_final  add primary key (order_id );
+
+###Date format change for order_date and ship_date. 
+
+ALTER TABLE BV_sales_data_final ADD order_date_date DATE;
+UPDATE BV_sales_data_final SET order_date_date = TO_DATE(order_date, 'MM/DD/YYYY');
+ALTER TABLE BV_sales_data_final DROP COLUMN order_date;
+ALTER TABLE BV_sales_data_final  RENAME COLUMN order_date_date TO order_date;
+
+ALTER TABLE BV_sales_data_final ADD order_date_date DATE;
+UPDATE BV_sales_data_final SET order_date_date = TO_DATE(ship_date, 'MM/DD/YYYY');
+ALTER TABLE BV_sales_data_final DROP COLUMN ship_date;
+ALTER TABLE BV_sales_data_final  RENAME COLUMN order_date_date TO ship_date;
+
+####Extracted end part of order_id.
+
+ALTER TABLE BV_sales_data_final ADD END_ORDER_ID VARCHAR(10);
+UPDATE BV_sales_data_final SET END_ORDER_ID =split_part (order_id,'-',3);
+
+### Final profit added .
+
+SELECT SUM(profit) AS total_profit FROM BV_sales_data_final;
+
+ALTER TABLE BV_sales_data_final ADD total_profit number (10,2)  default 1469034.09;
+
+####Days difference between order date and ship date.
+
+ALTER TABLE BV_sales_data_final ADD DAYS_TAKEN int;
+
+UPDATE BV_sales_data_final SET DAYS_TAKEN = DATEDIFF('Day', order_date, ship_date);
+
+##### Add Flag for discount.
+
+ALTER TABLE BV_sales_data_final ADD Flag varchar(5);
+UPDATE BV_sales_data_final
+SET Flag = (CASE
+            when discount > 0 then 'YES'
+            else  'No'
+              END);
+#### Rating added For shipment based on days .
+
+select  order_id,END_ORDER_ID,order_date ,ship_date,ship_mode,customer_name,segment,state,country,market,region,product_id,category,sub_category,product_name,
+sales number,quantity,discount,Flag,profit,total_profit,shipping_cost,order_priority,year,DAYS_TAKEN,
+
+case when DAYS_TAKEN <=3 then '5'
+     when DAYS_TAKEN <=6 and DAYS_TAKEN >3 then '4'
+     when DAYS_TAKEN <=10 and DAYS_TAKEN >6 then '3'
+     else  '2'
+end as Rating
+from BV_sales_data_final;
